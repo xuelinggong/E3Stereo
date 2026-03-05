@@ -157,7 +157,7 @@ class StereoDataset(data.Dataset):
 
 
 class SceneFlowDatasets(StereoDataset):
-    def __init__(self, aug_params=None, root='/home/qi.xiong/StereoMatching/IGEV-Improve/data/sceneflow/', dstype='frames_finalpass', things_test=False, edge_source='rcf'):
+    def __init__(self, aug_params=None, root='./data/sceneflow', dstype='frames_finalpass', things_test=False, edge_source='rcf'):
         super(SceneFlowDatasets, self).__init__(aug_params, edge_source=edge_source)
         self.root = root
         self.dstype = dstype
