@@ -22,7 +22,7 @@ class SceneFlowEdgeDataset(data.Dataset):
     """
     def __init__(
         self,
-        root="/home/qi.xiong/StereoMatching/IGEV-Improve/data/sceneflow",
+        root="./data/sceneflow",
         dstype="frames_finalpass",
         aug_params=None,
         split="TRAIN",
@@ -121,7 +121,7 @@ def fetch_edge_dataloader(args):
         aug_params["gamma"] = args.img_gamma
 
     dataset = SceneFlowEdgeDataset(
-        root=getattr(args, "data_root", "/home/qi.xiong/StereoMatching/IGEV-Improve/data/sceneflow"),
+        root=getattr(args, "data_root", "./data/sceneflow"),
         dstype="frames_finalpass",
         aug_params=aug_params,
         split="TRAIN",
@@ -153,7 +153,7 @@ def fetch_edge_eval_dataloader(args, max_samples=None):
     aug_params = {"fixed_size": fixed_size}
 
     dataset = SceneFlowEdgeDataset(
-        root=getattr(args, "data_root", "/home/qi.xiong/StereoMatching/IGEV-Improve/data/sceneflow"),
+        root=getattr(args, "data_root", "./data/sceneflow"),
         dstype="frames_finalpass",
         aug_params=aug_params,
         split="TRAIN",
