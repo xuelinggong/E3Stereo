@@ -247,8 +247,8 @@ def process_sceneflow_disp(
 
 def process_single_dir(
     disp_dir,
-    root_disp="/home/qi.xiong/StereoMatching/IGEV-Improve/data/sceneflow/disparity",
-    root_edge="/home/qi.xiong/StereoMatching/IGEV-Improve/data/sceneflow/ggtedge",
+    root_disp="./data/sceneflow/disparity",
+    root_edge="./data/sceneflow/ggtedge",
     grad_thresh=2.5,
     mode="sobel",
     blur_ksize=5,
