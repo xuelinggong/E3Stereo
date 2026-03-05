@@ -313,63 +313,63 @@ if __name__ == "__main__":
     """
 
     parser = argparse.ArgumentParser(description="Generate GT geometric edge maps from SceneFlow disparity.")
-    parser.add_argument("--grad_thresh", type=float, default=3.0, help="梯度幅值阈值，越大边越稀疏（单位：像素差）。")
+    parser.add_argument("--grad_thresh", type=float, default=3.0, help="Gradient magnitude threshold; larger values yield sparser edges (unit: pixel difference).")
     parser.add_argument(
         "--mode",
         type=str,
         default="sobel",
         choices=["sobel", "sobel_rel", "blur_sobel", "laplacian", "blur_laplacian", "laplacian_close", "canny"],
         help=(
-            "edge 计算模式："
-            "sobel（原始一阶绝对梯度）, "
-            "sobel_rel（一阶相对梯度 |∇d|/(|d|+eps)，对大平面更友好）, "
-            "blur_sobel（先模糊再一阶）, "
-            "laplacian（原始二阶）, "
-            "blur_laplacian（先模糊再二阶，对平面斜坡最不敏感）, "
-            "laplacian_close（二阶 + 闭运算：先膨胀再腐蚀，加粗并连通细边）, "
-            "canny（在 disparity 上做归一化后的 Canny）"
+            "Edge calculation mode: "
+            "sobel (raw absolute first-order gradient), "
+            "sobel_rel (relative first-order gradient |∇d|/(|d|+eps), friendlier to large planes), "
+            "blur_sobel (blur then first-order), "
+            "laplacian (raw second-order), "
+            "blur_laplacian (blur then second-order, least sensitive to planar slopes), "
+            "laplacian_close (second-order + morphological closing: dilate then erode to thicken and connect thin edges), "
+            "canny (Canny on normalized disparity)"
         ),
     )
     parser.add_argument(
         "--blur_ksize",
         type=int,
         default=5,
-        help="高斯模糊核大小（用于 blur_* 模式和 canny 的预平滑，需为奇数）。",
+        help="Gaussian blur kernel size (used for pre-smoothing in blur_* modes and canny, must be odd).",
     )
     parser.add_argument(
         "--blur_sigma",
         type=float,
         default=1.0,
-        help="高斯模糊 sigma（用于 blur_* 模式和 canny 的预平滑）。",
+        help="Gaussian blur sigma (used for pre-smoothing in blur_* modes and canny).",
     )
     parser.add_argument(
         "--canny_low",
         type=float,
         default=None,
-        help="Canny 低阈值（0-255），留空则使用默认50。",
+        help="Canny low threshold (0-255); leave empty to use default 50.",
     )
     parser.add_argument(
         "--canny_high",
         type=float,
         default=None,
-        help="Canny 高阈值（0-255），留空则使用 max(canny_low*3,150)。",
+        help="Canny high threshold (0-255); leave empty to use max(canny_low*3, 150).",
     )
     parser.add_argument(
         "--one_per_folder",
         action="store_true",
-        help="每个 disparity 子目录只处理一张，用于快速可视化/验证。",
+        help="Process only one image per disparity subdirectory for quick visualization/validation.",
     )
     parser.add_argument(
         "--max_files_per_split",
         type=int,
         default=0,
-        help="每个 split 最多处理多少张（按路径排序截断），默认50；设为<=0表示不截断。",
+        help="Maximum number of images to process per split (truncated by path sorting); default 0 (no truncation).",
     )
     parser.add_argument(
         "--disp_dir",
         type=str,
         default=None,
-        help="仅处理指定 disparity 子目录（例如 TRAIN/15mm_focallength/.../left），用于快速调试。",
+        help="Process only a specified disparity subdirectory (e.g., TRAIN/15mm_focallength/.../left) for quick debugging.",
     )
 
     args = parser.parse_args()
@@ -395,4 +395,3 @@ if __name__ == "__main__":
             one_per_folder=args.one_per_folder,
             max_files_per_split=args.max_files_per_split,
         )
-
