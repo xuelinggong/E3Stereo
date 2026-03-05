@@ -1,5 +1,5 @@
 """
-几何边缘训练数据集：从 SceneFlow 加载左图 + GT 几何边缘（由 disparity 梯度生成）。
+Geometric edge training dataset: Loads left images + GT geometric edges (generated from disparity gradients) from SceneFlow.
 """
 import os
 import os.path as osp
@@ -17,8 +17,8 @@ from core.utils.augmentor import FlowAugmentor
 
 class SceneFlowEdgeDataset(data.Dataset):
     """
-    SceneFlow 几何边缘数据集：左图 + GT edge（gtedge 目录）。
-    数据增强与 stereo 一致，对 img 和 edge 同步施加空间变换。
+    SceneFlow geometric edge dataset: left image + GT edge (gtedge directory).
+    Data augmentation is consistent with the stereo branch, applying spatial transformations synchronously to both img and edge.
     """
     def __init__(
         self,
@@ -42,8 +42,8 @@ class SceneFlowEdgeDataset(data.Dataset):
         self._collect_files()
 
     def _collect_files(self):
-        """收集 (left_image, edge) 路径对"""
-        # 与 SceneFlowDatasets 一致的路径逻辑
+        """Collect (left_image, edge) path pairs"""
+        # Path logic consistent with SceneFlowDatasets
         left_images = sorted(
             glob(osp.join(self.root, self.dstype, self.split, "*/*/left/*.png"))
         )
@@ -56,7 +56,7 @@ class SceneFlowEdgeDataset(data.Dataset):
         left_images = sorted(set(left_images))
 
         for left_path in left_images:
-            # edge: frames_finalpass -> gtedge，路径结构一致
+            # edge: frames_finalpass -> gtedge, consistent path structure
             edge_path = left_path.replace(self.dstype, "gtedge")
             if osp.exists(edge_path):
                 self.image_list.append(left_path)
@@ -80,17 +80,17 @@ class SceneFlowEdgeDataset(data.Dataset):
             edge = np.zeros(img.shape[:2], dtype=np.uint8)
         edge = edge.astype(np.float32) / 255.0  # [0, 1]
 
-        # 确保尺寸一致
+        # Ensure consistent dimensions
         if edge.shape != img.shape[:2]:
             edge = cv2.resize(edge, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_LINEAR)
 
-        # Eval 模式：固定尺寸，无增强
+        # Eval mode: Fixed size, no augmentation
         if self.fixed_size is not None:
             h, w = self.fixed_size[0], self.fixed_size[1]
             img = cv2.resize(img, (w, h), interpolation=cv2.INTER_LINEAR)
             edge = cv2.resize(edge, (w, h), interpolation=cv2.INTER_LINEAR)
         else:
-            # 数据增强：需要 img + edge 同步变换，使用假的 flow（仅用于 augmentor 的 crop）
+            # Data augmentation: requires synchronous transformation of img + edge, using fake flow (only for augmentor crop)
             flow = np.zeros((img.shape[0], img.shape[1], 2), dtype=np.float32)
             if self.augmentor is not None:
                 img, _, flow, edge = self.augmentor(img, img.copy(), flow, edge)
@@ -107,12 +107,12 @@ class SceneFlowEdgeDataset(data.Dataset):
 
 
 def fetch_edge_dataloader(args):
-    """创建几何边缘训练的 DataLoader"""
+    """Create DataLoader for geometric edge training"""
     aug_params = {
         "crop_size": args.image_size,
         "min_scale": args.spatial_scale[0],
         "max_scale": args.spatial_scale[1],
-        "do_flip": getattr(args, "edge_do_flip", "hf"),  # 'hf': 仅水平翻转，不交换左右
+        "do_flip": getattr(args, "edge_do_flip", "hf"),  # 'hf': horizontal flip only, do not swap left and right
         "yjitter": not getattr(args, "noyjitter", False),
     }
     if hasattr(args, "saturation_range") and args.saturation_range is not None:
@@ -142,8 +142,8 @@ def fetch_edge_dataloader(args):
 
 
 def fetch_edge_eval_dataloader(args, max_samples=None):
-    """创建无增强的 eval DataLoader，用于 ODS/OIS 评估。"""
-    # 无 crop，使用 fixed_size 得到固定分辨率
+    """Create eval DataLoader without augmentation for ODS/OIS evaluation."""
+    # No crop, use fixed_size to get a fixed resolution
     image_size = getattr(args, "image_size", [320, 736])
     if isinstance(image_size, (list, tuple)):
         fixed_size = (image_size[0], image_size[1])
