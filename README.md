@@ -1,8 +1,6 @@
 # Edge-Guided Iterative Geometry Encoding Volume for Stereo Matching
 
-> **Anonymous submission to ECCV 2026**
-
-This repository contains the source code for our paper submitted to ECCV 2026. The paper proposes a comprehensive edge-guided stereo matching framework built on top of IGEV-Stereo. We introduce a lightweight geometric edge branch (**GeoEdgeNet**) that predicts depth-discontinuity edge maps from RGB images, and systematically study how these edge priors can be injected into multiple stages of the stereo pipeline — including cost volume construction, context fusion, GRU update, disparity upsampling, and post-processing refinement — using three flexible fusion mechanisms: **concat**, **FiLM**, and **gated**.
+The paper proposes a comprehensive edge-guided stereo matching framework built on top of IGEV-Stereo. We introduce a lightweight geometric edge branch (**GeoEdgeNet**) that predicts depth-discontinuity edge maps from RGB images, and systematically study how these edge priors can be injected into multiple stages of the stereo pipeline — including cost volume construction, context fusion, GRU update, disparity upsampling, and post-processing refinement — using three flexible fusion mechanisms: **concat**, **FiLM**, and **gated**.
 
 ---
 
