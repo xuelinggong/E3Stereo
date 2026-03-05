@@ -1,11 +1,12 @@
 """
-边缘检测评估指标：ODS / OIS。
+Edge detection evaluation metrics: ODS / OIS.
 
-ODS (Optimal Dataset Scale): 全数据集使用单一最优阈值时的 F1
-OIS (Optimal Image Scale): 每张图各自最优阈值时的 F1 均值
+ODS (Optimal Dataset Scale): F1-score when using a single optimal threshold for the entire dataset.
+OIS (Optimal Image Scale): Mean F1-score when using the optimal threshold for each individual image.
 
-基于距离阈值的匹配：预测边缘像素若在 GT 边缘的 dist_thresh 像素内则视为正确匹配。
-默认 dist_thresh = max(2, 0.0075 * image_diagonal)，与 BSDS 惯例一致。
+Distance-threshold based matching: A predicted edge pixel is considered a correct match if it lies 
+within 'dist_thresh' pixels of a GT edge.
+Default dist_thresh = max(2, 0.0075 * image_diagonal), consistent with BSDS conventions.
 """
 import numpy as np
 import cv2
@@ -14,9 +15,9 @@ from scipy.ndimage import distance_transform_edt
 
 def _precision_recall_f1(pred_bin, gt_bin, dist_thresh_px):
     """
-    基于距离阈值的 precision / recall / F1。
-    pred_bin, gt_bin: [H,W] 二值 0/1
-    dist_thresh_px: 匹配距离阈值（像素）
+    Precision / Recall / F1 based on distance threshold.
+    pred_bin, gt_bin: [H, W] binary 0/1 arrays.
+    dist_thresh_px: Distance threshold for matching (pixels).
     """
     pred_bin = pred_bin.astype(np.uint8)
     gt_bin = gt_bin.astype(np.uint8)
@@ -30,13 +31,15 @@ def _precision_recall_f1(pred_bin, gt_bin, dist_thresh_px):
         prec = 0.0
         rec = 1.0
     else:
-        # 到最近 GT 边缘的距离（背景=1 的区域做 EDT，再取反得到到前景的距离）
+        # Distance to the nearest GT edge (compute EDT on background=1 to get distance to foreground)
         dist_to_gt = distance_transform_edt(1 - gt_bin)
         dist_to_pred = distance_transform_edt(1 - pred_bin)
-        # Precision: 预测边缘中有多少落在 GT 的 dist_thresh 内
+        
+        # Precision: Percentage of predicted edges that fall within dist_thresh of a GT edge
         tp_prec = (pred_bin & (dist_to_gt <= dist_thresh_px)).sum()
         prec = float(tp_prec) / float(n_pred)
-        # Recall: GT 边缘中有多少被预测边缘的 dist_thresh 内覆盖
+        
+        # Recall: Percentage of GT edges covered within dist_thresh of predicted edges
         tp_rec = (gt_bin & (dist_to_pred <= dist_thresh_px)).sum()
         rec = float(tp_rec) / float(n_gt)
 
@@ -46,16 +49,16 @@ def _precision_recall_f1(pred_bin, gt_bin, dist_thresh_px):
 
 def ods_ois_single_image(pred_prob, gt_binary, dist_thresh_px, thresh_list=None):
     """
-    单张图的 ODS/OIS 相关统计。
-    pred_prob: [H,W] float [0,1]
-    gt_binary: [H,W] 0/1 或 [0,1] 连续值（>0.5 视为边缘）
-    dist_thresh_px: 距离阈值（像素）
-    thresh_list: 用于扫阈值的列表，默认 0.01~0.99 步长 0.01
+    ODS/OIS statistics for a single image.
+    pred_prob: [H, W] float [0, 1]
+    gt_binary: [H, W] 0/1 or [0, 1] continuous values (values > 0.5 are treated as edges)
+    dist_thresh_px: Distance threshold (pixels)
+    thresh_list: List of thresholds to sweep; defaults to 0.01~0.99 with step 0.01
 
     Returns:
-        best_f1_ois: 该图的最优 F1（OIS 用）
-        best_thresh_ois: 该图的最优阈值
-        curve: list of (thresh, prec, rec, f1) 用于聚合 ODS
+        best_f1_ois: Optimal F1 for this image (used for OIS)
+        best_thresh_ois: Optimal threshold for this image
+        curve: list of (thresh, prec, rec, f1) used for ODS aggregation
     """
     gt_bin = (np.asarray(gt_binary, dtype=np.float32) > 0.5).astype(np.uint8)
     pred_prob = np.asarray(pred_prob, dtype=np.float32)
@@ -83,15 +86,15 @@ def ods_ois_single_image(pred_prob, gt_binary, dist_thresh_px, thresh_list=None)
 
 def compute_ods_ois(pred_list, gt_list, dist_thresh_frac=0.0075, thresh_list=None):
     """
-    多张图聚合计算 ODS / OIS。
-    pred_list: list of [H,W] float [0,1]
-    gt_list: list of [H,W] 0/1 或 [0,1]
-    dist_thresh_frac: 距离阈值 = max(2, dist_thresh_frac * image_diagonal)
+    Aggregate ODS / OIS calculation over multiple images.
+    pred_list: list of [H, W] float [0, 1]
+    gt_list: list of [H, W] 0/1 or [0, 1]
+    dist_thresh_frac: distance threshold = max(2, dist_thresh_frac * image_diagonal)
 
     Returns:
         ods: float
         ois: float
-        ods_thresh: ODS 对应的最优阈值
+        ods_thresh: Optimal threshold corresponding to ODS
     """
     if thresh_list is None:
         thresh_list = np.linspace(0.01, 0.99, 99)
@@ -99,7 +102,7 @@ def compute_ods_ois(pred_list, gt_list, dist_thresh_frac=0.0075, thresh_list=Non
     n = len(pred_list)
     assert n == len(gt_list), "pred_list and gt_list length mismatch"
 
-    # 按阈值聚合：每个阈值下，所有图的 (prec, rec, f1)
+    # Aggregation by threshold: (prec, rec, f1) across all images for each threshold
     thresh_to_f1 = {t: [] for t in thresh_list}
     ois_scores = []
 
@@ -114,10 +117,10 @@ def compute_ods_ois(pred_list, gt_list, dist_thresh_frac=0.0075, thresh_list=Non
         for (t, prec, rec, f1) in curve:
             thresh_to_f1[t].append(f1)
 
-    # OIS: 每图最优 F1 的均值
+    # OIS: Mean of the optimal F1 scores for each image
     ois = float(np.mean(ois_scores))
 
-    # ODS: 全数据集单一最优阈值
+    # ODS: Optimal single threshold for the entire dataset
     best_ods = 0.0
     best_ods_thresh = 0.5
     for t in thresh_list:
