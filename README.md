@@ -4,23 +4,6 @@ The paper proposes a comprehensive edge-guided stereo matching framework built o
 
 ---
 
-## Method Overview
-
-Our framework extends [IGEV-Stereo (CVPR 2023)](https://openaccess.thecvf.com/content/CVPR2023/papers/Xu_Iterative_Geometry_Encoding_Volume_for_Stereo_Matching_CVPR_2023_paper.pdf) with modular edge guidance at six injection points:
-
-| Module | Flag | Description |
-|---|---|---|
-| **Edge-Guided GWC** | `--edge_guided_gwc` | Injects edge into GWC correlation feature attention for boundary-aware initial cost |
-| **Edge-Guided Cost Agg** | `--edge_guided_cost_agg` | Injects edge into Hourglass FeatureAtt for better `init_disp` at boundaries |
-| **Edge Context Fusion** | `--edge_context_fusion` | Fuses edge into GRU context features |
-| **Edge-Guided Disp Head** | `--edge_guided_disp_head` | Guides `delta_disp` prediction in the GRU update step |
-| **Edge-Guided Upsampling** | `--edge_guided_upsample` | Guides sub-pixel disparity upsampling for sharper boundaries |
-| **Edge-Guided Refinement** | `--edge_guided_refinement` | Post-processing residual refinement at boundaries |
-
-Each module supports **concat**, **FiLM**, and **gated** fusion (selectable via `--edge_*_fusion_mode`).
-
----
-
 ## Datasets
 
 | Dataset | Split | Link |
