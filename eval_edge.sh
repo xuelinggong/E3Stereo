@@ -1,6 +1,6 @@
 #!/bin/bash
-# 几何边缘模型评估与可视化
-# 用法：bash eval_edge.sh
+# Geometric edge model evaluation and visualization
+# Usage：bash eval_edge.sh
 
 CKPT=./StereoMatching/IGEV-Improve/EStereo/checkpoints/geo-edge-sceneflow-1.5/geo-edge-sceneflow-1.5_best.pth
 DATA_ROOT=./StereoMatching/IGEV-Improve/data/sceneflow
