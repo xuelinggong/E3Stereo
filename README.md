@@ -8,11 +8,11 @@ The paper proposes a comprehensive edge-guided stereo matching framework built o
 
 | Dataset | Split | Link |
 |---|---|---|
-| 🌊 **Scene Flow** (FlyingThings3D + Monkaa + Driving) | Train / Test | [https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html) |
-| 🚗 **KITTI 2012** | Train / Test | [http://www.cvlibs.net/datasets/kitti/eval_stereo_flow.php?benchmark=stereo](http://www.cvlibs.net/datasets/kitti/eval_stereo_flow.php?benchmark=stereo) |
-| 🚙 **KITTI 2015** | Train / Test | [http://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo](http://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo) |
-| 🖼️ **Middlebury** | TrainingH / TrainingF / TrainingQ | [https://vision.middlebury.edu/stereo/submit3/](https://vision.middlebury.edu/stereo/submit3/) |
-| 🏔️ **ETH3D** | two_view_training | [https://www.eth3d.net/datasets#low-res-two-view-test-data](https://www.eth3d.net/datasets#low-res-two-view-test-data) |
+|  **Scene Flow** (FlyingThings3D + Monkaa + Driving) | Train / Test | [https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html) |
+|  **KITTI 2012** | Train / Test | [http://www.cvlibs.net/datasets/kitti/eval_stereo_flow.php?benchmark=stereo](http://www.cvlibs.net/datasets/kitti/eval_stereo_flow.php?benchmark=stereo) |
+|  **KITTI 2015** | Train / Test | [http://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo](http://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo) |
+|  **Middlebury** | TrainingH / TrainingF / TrainingQ | [https://vision.middlebury.edu/stereo/submit3/](https://vision.middlebury.edu/stereo/submit3/) |
+|  **ETH3D** | two_view_training | [https://www.eth3d.net/datasets#low-res-two-view-test-data](https://www.eth3d.net/datasets#low-res-two-view-test-data) |
 
 ---
 
