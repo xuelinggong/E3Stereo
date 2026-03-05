@@ -86,7 +86,7 @@ class StereoDataset(data.Dataset):
             img1 = img1[..., :3]
             img2 = img2[..., :3]
 
-        # 加载 GT edge（如果需要）
+        # Load GT edge if needed
         edge = None
         if self.edge_source == 'gt':
             disp_path = self.disparity_list[index]
@@ -95,7 +95,7 @@ class StereoDataset(data.Dataset):
                 edge = cv2.imread(edge_path, cv2.IMREAD_GRAYSCALE)
                 if edge is not None:
                     edge = edge.astype(np.float32) / 255.0  # [H, W] in [0, 1]
-                    # 确保 edge 和 img1 尺寸一致（数据增强前）
+                    # Ensure edge and img1 dimensions match (before augmentation)
                     h_img, w_img = img1.shape[:2]
                     h_edge, w_edge = edge.shape[:2]
                     if (h_edge, w_edge) != (h_img, w_img):
@@ -107,13 +107,13 @@ class StereoDataset(data.Dataset):
 
         if self.augmentor is not None:
             if self.sparse:
-                # 传递 edge 给 SparseFlowAugmentor，让它同步应用空间变换
+                # Pass edge to SparseFlowAugmentor to apply spatial transformations synchronously
                 if edge is not None:
                     img1, img2, flow, valid, edge = self.augmentor(img1, img2, flow, valid, edge)
                 else:
                     img1, img2, flow, valid = self.augmentor(img1, img2, flow, valid)
             else:
-                # 传递 edge 给 FlowAugmentor，让它同步应用空间变换（scale/flip/crop）
+                # Pass edge to FlowAugmentor to apply spatial transformations synchronously (scale/flip/crop)
                 if edge is not None:
                     img1, img2, flow, edge = self.augmentor(img1, img2, flow, edge)
                 else:
@@ -137,7 +137,7 @@ class StereoDataset(data.Dataset):
 
         flow = flow[:1]
         
-        # 将 edge 转换为 tensor
+        # Convert edge to tensor
         if edge is not None:
             edge = torch.from_numpy(edge).unsqueeze(0).float()  # [1, H, W]
         
@@ -331,7 +331,7 @@ def fetch_dataloader(args):
     if hasattr(args, "do_flip") and args.do_flip is not None:
         aug_params["do_flip"] = args.do_flip
 
-    # 获取 edge_source 参数
+    # Get edge_source parameter
     edge_source = getattr(args, 'edge_source', 'rcf')
 
     train_dataset = None
