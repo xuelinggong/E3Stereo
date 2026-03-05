@@ -1,6 +1,6 @@
 #!/bin/bash
-# 几何边缘分支独立训练：复用 IGEV Feature + EdgeHead，在 SceneFlow 上学习几何边缘
-# 数据：./data/sceneflow（需已运行 gtedge.py 生成 gtedge）
+# Independent training of the geometric edge branch: Reusing IGEV Feature + EdgeHead to learn geometric edges on SceneFlow.
+# Data: ./data/sceneflow (requires running gtedge.py beforehand to generate gtedge).
 
 name=geo-edge-sceneflow-1-Spt-it3
 restore_ckpt= 
