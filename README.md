@@ -16,20 +16,6 @@ The paper proposes a comprehensive edge-guided stereo matching framework built o
 
 ---
 
-## Main Results
-
-Results on SceneFlow (Things, TEST split) after Scene Flow pre-training:
-
-| Method | Edge Module | SceneFlow EPE | SceneFlow D1 |
-|---|---|---|---|
-| IGEV-Stereo (baseline) | — | 0.47 | 0.72% |
-| + Edge-Guided GWC (film) | GWC | — | — |
-| + Edge-Guided Upsampling (film) | Upsample | — | — |
-| + Edge Context Fusion (film) | Context | — | — |
-| + Combined (all modules) | Full | — | — |
-
-
-
 ## Repository Structure
 
 ```
