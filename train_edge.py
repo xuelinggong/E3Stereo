@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """
-几何边缘分支独立训练脚本。
+Independent training script for the geometric edge branch.
 
-复用 IGEV 的 Feature backbone + EdgeHead，在 SceneFlow 上学习从 RGB 预测几何边缘
-（label 为 disparity 梯度生成的 GT edge，见 gtedge.py）。
+Reuses the Feature backbone + EdgeHead of IGEV to learn to predict geometric edges from RGB on SceneFlow
+(Labels are GT edges generated from disparity gradients, see gtedge.py).
 
-验证目标：模型能否在合成数据上从单张 RGB 学习到 depth-discontinuity 几何边缘特征。
+Validation goal: Can the model learn depth-discontinuity geometric edge features from a single RGB image on synthetic data.
 """
 import os
 import argparse
@@ -27,7 +27,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 
 def run_ods_ois_eval(model, eval_loader, step, writer, dist_thresh_frac=0.0075):
-    """在 eval_loader 上计算 ODS/OIS，写入 TensorBoard 并打印。"""
+    """Calculate ODS/OIS on eval_loader, write to TensorBoard and print."""
     model.eval()
     pred_list = []
     gt_list = []
@@ -65,8 +65,8 @@ def count_parameters(model):
 
 def edge_loss(pred_logits, target, pos_weight=2.0):
     """
-    BCE with pos_weight 处理边缘像素稀疏（正样本少）的类别不平衡。
-    target: [B, 1, H, W], 值域 [0, 1]
+    BCE with pos_weight to handle class imbalance due to sparse edge pixels (few positive samples).
+    target: [B, 1, H, W], range [0, 1]
     """
     target = target.clamp(0.0, 1.0)
     return F.binary_cross_entropy_with_logits(
@@ -75,7 +75,7 @@ def edge_loss(pred_logits, target, pos_weight=2.0):
 
 
 def edge_metrics(pred_logits, target, thresh=0.5):
-    """计算 precision, recall, F1（二值化阈值 0.5）"""
+    """Calculate precision, recall, F1 (binarization threshold 0.5)"""
     pred = (torch.sigmoid(pred_logits) > thresh).float()
     target_bin = (target > thresh).float()
     tp = (pred * target_bin).sum()
@@ -107,7 +107,7 @@ class Logger:
         metrics_str = ("{:10.4f}, " * len(metrics_data)).format(*metrics_data)
         logging.info(f"Edge Training ({self.total_steps}): {training_str + metrics_str}")
 
-        # 写入 TensorBoard，并顺便基于 f1 维护最佳模型
+        # Write to TensorBoard and maintain the best model based on F1 score
         for k in self.running_loss:
             avg_val = self.running_loss[k] / Logger.SUM_FREQ
             self.writer.add_scalar(k, avg_val, self.total_steps)
@@ -148,10 +148,10 @@ def train(args):
         optimizer, args.lr, args.num_steps + 100,
         pct_start=0.05, cycle_momentum=False, anneal_strategy="linear"
     )
-    # logger 里会自动保存基于 f1 的最佳模型到 {logdir}/{name}_best.pth
+    # logger will automatically save the best model based on f1 to {logdir}/{name}_best.pth
     logger = Logger(model, scheduler, args.logdir, args.name)
 
-    save_freq = getattr(args, "save_freq", 0)  # 0=不定期保存，仅保存 best 和 final
+    save_freq = getattr(args, "save_freq", 0)  # 0=no regular saving, only save best and final
 
     total_steps = 0
     if args.restore_ckpt:
@@ -183,7 +183,7 @@ def train(args):
             img = img.cuda()
             edge_gt = edge_gt.cuda()
 
-            # 输入归一化到 [-1, 1]，与 IGEV stereo 一致
+            # Normalize input to [-1, 1], consistent with IGEV stereo
             img_norm = (2 * (img / 255.0) - 1.0).contiguous()
 
             optimizer.zero_grad()
@@ -204,14 +204,14 @@ def train(args):
             logger.push(metrics)
             total_steps += 1
 
-            # 定期 ODS/OIS 评估
+            # Periodic ODS/OIS evaluation
             if eval_loader is not None and total_steps % args.eval_freq == 0 and total_steps > 0:
                 run_ods_ois_eval(
                     model, eval_loader, total_steps, logger.writer,
                     dist_thresh_frac=getattr(args, "ods_dist_frac", 0.0075)
                 )
 
-            # 定期保存 checkpoint（含 optimizer/scheduler，便于 resume）
+            # Periodically save checkpoint (including optimizer/scheduler for easy resume)
             if save_freq > 0 and total_steps % save_freq == 0 and total_steps > 0:
                 ckpt_path = Path(args.logdir) / f"{args.name}_step{total_steps}.pth"
                 torch.save({
@@ -228,7 +228,7 @@ def train(args):
         if total_steps >= args.num_steps:
             break
 
-    # 训练结束前做一次 ODS/OIS 评估
+    # Perform a final ODS/OIS evaluation before ending training
     if eval_loader is not None:
         run_ods_ois_eval(
             model, eval_loader, total_steps, logger.writer,
@@ -260,19 +260,19 @@ if __name__ == "__main__":
     parser.add_argument("--saturation_range", type=float, nargs="+", default=[0.6, 1.4])
     parser.add_argument("--noyjitter", action="store_true")
     parser.add_argument("--eval_freq", type=int, default=10000,
-                        help="每 N 步评估一次 ODS/OIS，0 表示不评估")
+                        help="Evaluate ODS/OIS every N steps, 0 means no evaluation")
     parser.add_argument("--save_freq", type=int, default=10000,
-                        help="每 N 步保存一次 checkpoint（含 optimizer/scheduler 可 resume），0 表示不定期保存")
+                        help="Save checkpoint every N steps (includes optimizer/scheduler to resume), 0 means no periodic saving")
     parser.add_argument("--eval_samples", type=int, default=500,
-                        help="ODS/OIS 评估使用的最大样本数")
+                        help="Maximum number of samples used for ODS/OIS evaluation")
     parser.add_argument("--ods_dist_frac", type=float, default=0.0075,
-                        help="ODS/OIS 距离阈值 = max(2, frac*image_diagonal)")
+                        help="ODS/OIS distance threshold = max(2, frac*image_diagonal)")
     parser.add_argument("--no_refinement", action="store_true",
-                        help="关闭 EdgeRefinementModule（加载旧 ckpt 时使用）")
+                        help="Disable EdgeRefinementModule (used when loading old ckpts)")
     parser.add_argument("--no_spatial_attn", action="store_true",
-                        help="关闭 SpatialAttention（加载旧 ckpt 时使用）")
+                        help="Disable SpatialAttention (used when loading old ckpts)")
     parser.add_argument("--refine_iters", type=int, default=1,
-                        help="Refine 迭代次数，1=单次，2/3=迭代锐化（共享同一 Refine 模块）")
+                        help="Number of refine iterations, 1=single pass, 2/3=iterative sharpening (shares the same Refine module)")
     args = parser.parse_args()
 
     torch.manual_seed(666)
