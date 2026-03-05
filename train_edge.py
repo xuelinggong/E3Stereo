@@ -248,7 +248,7 @@ if __name__ == "__main__":
     parser.add_argument("--name", default="geo-edge", help="experiment name")
     parser.add_argument("--restore_ckpt", default=None, help="resume from checkpoint")
     parser.add_argument("--logdir", default="./checkpoints/geo-edge", help="log and checkpoint dir")
-    parser.add_argument("--data_root", default="/home/qi.xiong/StereoMatching/IGEV-Improve/data/sceneflow", help="SceneFlow root")
+    parser.add_argument("--data_root", default="./data/sceneflow", help="SceneFlow root")
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--num_steps", type=int, default=50000)
