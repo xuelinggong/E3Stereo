@@ -125,7 +125,6 @@ def validate_kitti(model, iters=32, mixed_prec=False):
 def validate_sceneflow(model, iters=32, mixed_prec=False, args=None):
     """ Peform validation using the Scene Flow (TEST) split """
     model.eval()
-    # 从 args 获取 edge_source，确保验证数据集与训练时一致
     edge_source = getattr(args, 'edge_source', 'rcf') if args is not None else 'rcf'
     val_dataset = datasets.SceneFlowDatasets(dstype='frames_finalpass', things_test=True, edge_source=edge_source)
 
@@ -133,7 +132,6 @@ def validate_sceneflow(model, iters=32, mixed_prec=False, args=None):
     epe_edge_list, epe_flat_list = [], []
     for val_id in tqdm(range(len(val_dataset))):
         data_item = val_dataset[val_id]
-        # 数据可能包含 edge（如果 edge_source='gt'）
         if len(data_item) == 6:
             meta, image1, image2, flow_gt, valid_gt, left_edge = data_item
         else:
@@ -143,7 +141,6 @@ def validate_sceneflow(model, iters=32, mixed_prec=False, args=None):
         image1 = image1[None].cuda()
         image2 = image2[None].cuda()
         
-        # 如果从数据集获取了 edge，需要添加 batch 维度并移到 GPU
         if left_edge is not None:
             left_edge = left_edge[None].cuda()
 
@@ -168,7 +165,6 @@ def validate_sceneflow(model, iters=32, mixed_prec=False, args=None):
         epe_list.append(epe[val].mean().item())
         out_list.append(out[val].cpu().numpy())
 
-        # 若有 GT edge，分别统计 edge 与 flat 区域的 EPE
         if left_edge is not None:
             edge_flat = left_edge.cpu().squeeze().flatten()
             if edge_flat.shape[0] == epe.shape[0]:
