@@ -147,7 +147,7 @@ def run_eval(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Eval & visualize geometric edge model")
     parser.add_argument("--ckpt", required=True, help="path to GeoEdgeNet checkpoint")
-    parser.add_argument("--data_root", default="/home/qi.xiong/StereoMatching/IGEV-Improve/data/sceneflow")
+    parser.add_argument("--data_root", default="./data/sceneflow")
     parser.add_argument("--dstype", default="frames_finalpass")
     parser.add_argument("--split", default="TEST", choices=["TRAIN", "TEST"])
     parser.add_argument("--output_dir", default="./eval_edge_vis")
