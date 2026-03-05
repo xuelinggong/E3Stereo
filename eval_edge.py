@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-几何边缘模型评估与可视化：加载训练好的 GeoEdgeNet，在 SceneFlow 上推理并保存可视化结果。
+Geometric edge model evaluation and visualization: Load the trained GeoEdgeNet, perform inference on SceneFlow, and save the visualization results.
 """
 import argparse
 import os
@@ -16,7 +16,7 @@ from core.utils import frame_utils
 
 
 def collect_sceneflow_pairs(root, dstype, split, max_samples=None):
-    """收集 SceneFlow (image, edge) 路径对，无增强"""
+    """Collect SceneFlow (image, edge) path pairs, no augmentation"""
     left_images = sorted(glob(osp.join(root, dstype, split, "*/*/left/*.png")))
     left_images += sorted(glob(osp.join(root, dstype, split, "*/left/*.png")))
     left_images += sorted(glob(osp.join(root, dstype, split, "*/*/*/left/*.png")))
@@ -48,20 +48,20 @@ def load_edge(path):
 
 def visualize_row(img, gt_edge, pred_edge, thresh=0.5):
     """
-    生成一行可视化：[RGB | GT Edge | Pred Edge | Overlay]
+    Generate a row of visualization: [RGB | GT Edge | Pred Edge | Overlay]
     """
     h, w = img.shape[:2]
     gt_3ch = np.stack([gt_edge] * 3, axis=-1)
     pred_bin = (pred_edge > thresh).astype(np.float32)
     pred_3ch = np.stack([pred_bin] * 3, axis=-1)
 
-    # Overlay: 绿色=GT, 红色=Pred, 黄色=重叠
+    # Overlay: Green=GT, Red=Pred, Yellow=Overlap
     overlay = img.copy().astype(np.float32) / 255.0
-    overlay[..., 0] = np.clip(overlay[..., 0] + pred_bin * 0.5, 0, 1)  # 预测边缘偏红
-    overlay[..., 1] = np.clip(overlay[..., 1] + gt_edge * 0.5, 0, 1)   # GT 边缘偏绿
+    overlay[..., 0] = np.clip(overlay[..., 0] + pred_bin * 0.5, 0, 1)  # Predicted edge tends to be red
+    overlay[..., 1] = np.clip(overlay[..., 1] + gt_edge * 0.5, 0, 1)   # GT edge tends to be green
     overlay = (overlay * 255).astype(np.uint8)
 
-    # 统一尺寸
+    # Unify sizes
     gt_vis = (gt_3ch * 255).astype(np.uint8)
     pred_vis = (pred_3ch * 255).astype(np.uint8)
 
@@ -114,7 +114,7 @@ def run_eval(args):
         # Visualize
         row = visualize_row(img, gt_edge, pred_edge, thresh=thresh)
 
-        # 添加标题
+        # Add titles
         font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(row, "RGB", (10, 30), font, 1, (255, 255, 255), 2)
         cv2.putText(row, "GT Edge", (img.shape[1] + 10, 30), font, 1, (255, 255, 255), 2)
@@ -155,10 +155,10 @@ if __name__ == "__main__":
     parser.add_argument("--thresh", type=float, default=0.5, help="binary threshold for pred")
     parser.add_argument("--save_metrics", action="store_true", help="append per-image metrics to file")
     parser.add_argument("--no_refinement", action="store_true",
-                        help="关闭 EdgeRefinementModule（加载旧 ckpt 时使用）")
+                        help="Disable EdgeRefinementModule (used when loading old ckpts)")
     parser.add_argument("--no_spatial_attn", action="store_true",
-                        help="关闭 SpatialAttention（加载旧 ckpt 时使用）")
+                        help="Disable SpatialAttention (used when loading old ckpts)")
     parser.add_argument("--refine_iters", type=int, default=1,
-                        help="Refine 迭代次数，需与训练时一致")
+                        help="Number of refine iterations, must be consistent with training")
     args = parser.parse_args()
     run_eval(args)
