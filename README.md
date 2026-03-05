@@ -47,7 +47,6 @@ Results on SceneFlow (Things, TEST split) after Scene Flow pre-training:
 | + Edge Context Fusion (film) | Context | — | — |
 | + Combined (all modules) | Full | — | — |
 
-> Note: The full result table is presented in the paper. Detailed numbers for KITTI 2012, KITTI 2015, Middlebury, and ETH3D are reported in the main paper and supplementary material.
 
 
 ## Repository Structure
