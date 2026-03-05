@@ -4,6 +4,18 @@ The paper proposes a comprehensive edge-guided stereo matching framework built o
 
 ---
 
+## Demo Results
+
+The demo results can be viewed online:
+
+| Dataset | Demo Link |
+|---|---|
+| CPT | [View Demo](https://anon-stereo-2026-3-e3stereo.static.hf.space/web_vis_cpt/index.html) |
+| ETH3D | [View Demo](https://anon-stereo-2026-3-e3stereo.static.hf.space/web_vis_eth3d/index.html) |
+| KITTI 2012 | [View Demo](https://anon-stereo-2026-3-e3stereo.static.hf.space/web_vis_kitti2012/index.html) |
+| KITTI 2015 | [View Demo](https://anon-stereo-2026-3-e3stereo.static.hf.space/web_vis_kitti2015/index.html) |
+| Middlebury | [View Demo](https://anon-stereo-2026-3-e3stereo.static.hf.space/web_vis_middlebury/index.html) |
+
 ## 📦 Datasets
 
 | Dataset | Split | Link |
