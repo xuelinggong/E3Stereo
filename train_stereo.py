@@ -52,17 +52,17 @@ def sequence_loss(disp_preds, disp_init_pred, disp_gt, valid, loss_gamma=0.9, ma
     epe_map = torch.sum((disp_preds[-1] - disp_gt)**2, dim=1).sqrt().unsqueeze(1)  # [B, 1, H, W]
     epe_flat_all = epe_map.view(-1)[valid_mask.view(-1)]
 
-    # 先初始化 metrics，把 edge/flat 的 key 固定加入，保证日志里总会有这两个字段
+    # Initialize metrics, add edge/flat keys to ensure they are always present in the log
     metrics = {
         'epe': epe_flat_all.mean().item(),
         '1px': (epe_flat_all < 1).float().mean().item(),
         '3px': (epe_flat_all < 3).float().mean().item(),
         '5px': (epe_flat_all < 5).float().mean().item(),
-        'epe_edge': 0.0,  # 默认 0，如果当前 batch 没有 edge 像素就保持为 0
-        'epe_flat': 0.0,  # 默认 0，后面会用真实 flat 区域的 EPE 覆盖
+        'epe_edge': 0.0,  # Default to 0, remain 0 if current batch has no edge pixels
+        'epe_flat': 0.0,  # Default to 0, will be overwritten by EPE of actual flat regions
     }
 
-    # 若有 edge，分别统计 edge 区域和 flat 区域的 EPE
+    # Calculate EPE for edge and flat regions separately if edge is present
     if edge is not None:
         if edge.shape[-2:] != valid_mask.shape[-2:]:
             edge = F.interpolate(edge.float(), size=valid_mask.shape[-2:], mode='bilinear', align_corners=False)
@@ -73,7 +73,7 @@ def sequence_loss(disp_preds, disp_init_pred, disp_gt, valid, loss_gamma=0.9, ma
         if edge_mask.any():
             epe_edge = epe_map[edge_mask].view(-1)
             metrics['epe_edge'] = epe_edge.mean().item()
-        # 一般 flat 区域总是存在，这里仍然做一下保护
+        # Flat regions usually exist, but keeping this check for safety
         if flat_mask.any():
             epe_flat = epe_map[flat_mask].view(-1)
             metrics['epe_flat'] = epe_flat.mean().item()
@@ -167,19 +167,19 @@ def train(args):
 
         for i_batch, (meta, *data_blob) in enumerate(tqdm(train_loader)):
             optimizer.zero_grad()
-            # data_blob 现在包含: image1, image2, disp_gt, valid, edge
+            # data_blob now contains: image1, image2, disp_gt, valid, edge
             if len(data_blob) == 5:
                 image1, image2, disp_gt, valid, left_edge = [x.cuda() if x is not None else None for x in data_blob]
             else:
-                # 兼容旧版本（没有 edge）
+                # Compatible with older versions (without edge)
                 image1, image2, disp_gt, valid = [x.cuda() for x in data_blob]
                 left_edge = None
 
             assert model.training
             disp_init_pred, disp_preds, left_edge_out = model(image1, image2, iters=args.train_iters, left_edge=left_edge)
             assert model.training
-            # edge_for_metrics: 用 dataset 原始 edge (0/1) 做 epe_edge/epe_flat 统计，避免模型内部 edge_scale 缩放后 edge>0.5 的 mask 为空
-            # 当 dataset 无 edge (如 edge_source=rcf) 时退化为 left_edge_out
+            # edge_for_metrics: Use dataset's original edge (0/1) for epe_edge/epe_flat stats to prevent empty masks after internal edge_scale scaling
+            # Fallback to left_edge_out when dataset has no edge (e.g., edge_source=rcf)
             edge_for_metrics = left_edge if left_edge is not None else left_edge_out
 
             loss, metrics = sequence_loss(
@@ -261,11 +261,11 @@ if __name__ == '__main__':
     parser.add_argument('--spatial_scale', type=float, nargs='+', default=[-0.2, 0.4], help='re-scale the images randomly')
     parser.add_argument('--noyjitter', action='store_true', help='don\'t simulate imperfect rectification')
     
-    # Edge augmentation (需配合 edge_model 使用)
+    # Edge augmentation (requires edge_model)
     parser.add_argument('--edge_source', type=str, default=None, choices=['rcf', 'gt'],
                         help="edge source: 'rcf' use RCF online prediction, 'gt' use gtedge pre-generated edge.")
     parser.add_argument('--edge_model', type=str, default=None,
-                        help='path to the edge model (当 edge_source=rcf 且开启任意 edge_* 时必需)')
+                        help='path to the edge model (required when edge_source=rcf and any edge_* is enabled)')
     parser.add_argument('--edge_context_fusion', action='store_true',
                         help='fuse edge into context features for GRU input')
     parser.add_argument('--edge_fusion_mode', type=str, default='film',
