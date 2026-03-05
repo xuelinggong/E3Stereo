@@ -1,3 +1,19 @@
+"""
+Generate ground-truth geometric edge maps from SceneFlow disparity.
+
+Geometric edges are defined as pixels where the disparity gradient exceeds a threshold,
+corresponding to depth discontinuities. These GT edge maps serve as supervision labels
+for the GeoEdgeNet branch and as auxiliary inputs to the edge-guided stereo matching pipeline.
+
+Supported gradient modes:
+  - sobel:          Sobel gradient magnitude (default)
+  - blur_sobel:     Gaussian blur first, then Sobel (retains large-scale geometric edges only)
+  - laplacian:      Laplacian edge detection
+  - laplacian_close: Laplacian + morphological closing to fill gaps
+  - canny:          Canny edge detector (requires canny_low/canny_high thresholds)
+  - sobel_rel:      Relative Sobel gradient: |grad| / (|disp| + eps)
+"""
+
 import os
 import os.path as osp
 from glob import glob
@@ -31,34 +47,30 @@ def read_pfm(file):
 
 
 def _grad_mag(disp, mode="sobel", blur_ksize=5, blur_sigma=1.0):
-    """
-    计算 disparity 的梯度幅值:
-    - mode == "sobel"      : 直接对原始 disp 做 Sobel
-    - mode == "blur_sobel" : 先高斯模糊，再做 Sobel（抑制细碎高频，如树叶）
-    """
+    """Compute gradient magnitude of a disparity map."""
     disp = np.asarray(disp, np.float32)
 
-    # 无效值置零，避免产生伪边缘
+    # Set invalid values to zero to avoid generating false edges.
     invalid = ~np.isfinite(disp)
     disp[invalid] = 0.0
 
-    # 可选：先做高斯模糊，去掉高频噪声/细碎纹理
+    # Optional: Apply Gaussian blur first to remove high-frequency noise or fine textures.
     if mode in ("blur_sobel", "blur_laplacian"):
-        # 高斯模糊，仅保留大尺度结构
+        # Gaussian blur, retaining only large-scale structures.
         k = int(blur_ksize)
         if k < 1:
             k = 1
         if k % 2 == 0:
-            k += 1  # kernel size 必须为奇数
+            k += 1  # kernel size must be odd
         disp = cv2.GaussianBlur(disp, (k, k), sigmaX=float(blur_sigma), sigmaY=float(blur_sigma))
 
     if mode in ("sobel", "blur_sobel"):
-        # 一阶梯度（Slope）：平面斜坡会是常数非零 → 容易整块发白
+        # First-order gradient (Slope): Planar slopes will be non-zero constants -> prone to whitening out entire regions
         gx = cv2.Sobel(disp, cv2.CV_32F, 1, 0, ksize=3)
         gy = cv2.Sobel(disp, cv2.CV_32F, 0, 1, ksize=3)
         mag = np.sqrt(gx * gx + gy * gy)
     elif mode in ("laplacian", "blur_laplacian", "laplacian_close"):
-        # 二阶梯度（Curvature）：平面斜坡二阶导接近0，只在曲率/跳变处响应
+        # Second-order gradient (Curvature): Second derivative of planar slopes is close to 0, responding only at curvatures/jumps
         lap = cv2.Laplacian(disp, cv2.CV_32F, ksize=3)
         mag = np.abs(lap)
     else:
@@ -77,26 +89,26 @@ def disp_to_edge(
     canny_high=None,
 ):
     """
-    根据 disparity 的梯度生成几何边缘:
-    - mode="sobel"              : 直接 Sobel，一阶绝对梯度
-    - mode="sobel_rel"          : Sobel + 相对梯度阈值：|∇d| / (|d|+eps)，对大平面更友好
-    - mode="blur_sobel"         : 先模糊，再 Sobel，只保留大尺度几何边
-    - mode="laplacian"          : 直接二阶导（Laplacian），对平面斜坡更不敏感
-    - mode="blur_laplacian"     : 先模糊，再 Laplacian，更关注大尺度曲率/跳变
-    - mode="laplacian_close"    : 直接二阶导 + 形态学闭运算（先膨胀再腐蚀），可加粗并填补空洞
-    - mode="canny"              : 对 disparity 做归一化 + Canny 边缘检测
-    - 根据梯度幅值阈值 grad_thresh 生成二值边缘
+    Generate geometric edges based on disparity gradients:
+    - mode="sobel"              : Direct Sobel, absolute first-order gradient
+    - mode="sobel_rel"          : Sobel + relative gradient threshold: |∇d| / (|d|+eps), friendlier to large planes
+    - mode="blur_sobel"         : Blur then Sobel, retaining only large-scale geometric edges
+    - mode="laplacian"          : Direct second derivative (Laplacian), less sensitive to planar slopes
+    - mode="blur_laplacian"     : Blur then Laplacian, focusing more on large-scale curvatures/jumps
+    - mode="laplacian_close"    : Direct second derivative + morphological closing (dilate then erode) to thicken and fill holes
+    - mode="canny"              : Normalized disparity + Canny edge detection
+    - Generate binary edges based on the gradient magnitude threshold grad_thresh
     """
     disp_arr = np.asarray(disp, np.float32)
 
-    # 专门的 Canny 分支（不走 _grad_mag）
+    # Specific Canny branch (bypasses _grad_mag)
     if mode == "canny":
-        # 处理无效值
+        # Handle invalid values
         d = np.copy(disp_arr)
         invalid = ~np.isfinite(d)
         d[invalid] = 0.0
 
-        # 基于分位数做鲁棒归一化到 [0, 255]
+        # Robust normalization to [0, 255] based on percentiles
         vmin, vmax = np.percentile(d, 1), np.percentile(d, 99)
         if not np.isfinite(vmin):
             vmin = 0.0
@@ -106,14 +118,14 @@ def disp_to_edge(
         d = (d - vmin) / (vmax - vmin) * 255.0
         d8 = d.astype(np.uint8)
 
-        # 可选模糊，减少噪声
+        # Optional blur to reduce noise
         if blur_ksize and blur_ksize > 1:
             k = int(blur_ksize)
             if k % 2 == 0:
                 k += 1
             d8 = cv2.GaussianBlur(d8, (k, k), sigmaX=float(blur_sigma), sigmaY=float(blur_sigma))
 
-        # Canny 阈值：如果没显式给，就用一个相对保守的默认
+        # Canny thresholds: use relatively conservative defaults if not explicitly provided
         if canny_low is None and canny_high is None:
             low = 50
             high = 150
@@ -124,7 +136,7 @@ def disp_to_edge(
         edge = cv2.Canny(d8, threshold1=float(low), threshold2=float(high))
         return edge
 
-    # 映射到基础梯度模式
+    # Map to base gradient mode
     base_mode = mode
     if mode == "laplacian_close":
         base_mode = "laplacian"
@@ -133,7 +145,7 @@ def disp_to_edge(
 
     mag = _grad_mag(disp_arr, mode=base_mode, blur_ksize=blur_ksize, blur_sigma=blur_sigma)
 
-    # 相对梯度阈值：|∇d| / (|d| + eps)
+    # Relative gradient threshold: |∇d| / (|d| + eps)
     if mode == "sobel_rel":
         denom = np.abs(disp_arr)
         eps = 1e-3
@@ -142,7 +154,7 @@ def disp_to_edge(
     edge = (mag >= grad_thresh).astype(np.uint8)
 
     if mode == "laplacian_close":
-        # 形态学闭运算：先膨胀再腐蚀，填补缝隙、加粗细边
+        # Morphological closing: dilate then erode to fill gaps and thicken thin edges
         k = int(blur_ksize)
         if k < 1:
             k = 1
@@ -170,30 +182,30 @@ def process_sceneflow_disp(
     max_files_per_split=None,
 ):
     """
-    遍历 SceneFlow disparity 目录，生成 GT Edge Map。
+    Iterate over SceneFlow disparity directories to generate GT Edge Maps.
 
-    目录关系（和你现在的数据完全一致）：
+    Directory structure:
         /data/sceneflow/
-            disparity/      # 视差 .pfm
+            disparity/      # Disparity .pfm
                 TRAIN/...
                 TEST/...
-            frames_finalpass/  # RGB 图像
+            frames_finalpass/  # RGB images
                 TRAIN/...
                 TEST/...
-            gtedge/         # 我们要生成的 GT 边缘（本脚本输出）
+            gtedge/         # The GT edges to be generated (output of this script)
                 TRAIN/...
                 TEST/...
-    root_disp 对应上面的 disparity，root_edge 对应 gtedge。
+    root_disp corresponds to disparity above, root_edge corresponds to gtedge.
     """
 
     for split in split_list:
-        # 例如：.../disparity/TRAIN/**.pfm
+        # example：.../disparity/TRAIN/**.pfm
         pattern = osp.join(root_disp, split, "**", "*.pfm")
         all_files = sorted(glob(pattern, recursive=True))
 
-        # 选择要处理的文件列表
+        # Select the list of files to process
         if one_per_folder:
-            # 每个目录只取一张，用于快速可视化/验证
+            # Take only one image per directory for quick visualization/validation
             disp_files = []
             seen_dirs = set()
             for p in all_files:
@@ -205,7 +217,7 @@ def process_sceneflow_disp(
         else:
             disp_files = list(all_files)
 
-        # 进一步限制每个 split 的最大处理数量
+        # Further limit the maximum number of processed files per split
         if max_files_per_split is not None and max_files_per_split > 0:
             disp_files = disp_files[: max_files_per_split]
 
@@ -216,10 +228,10 @@ def process_sceneflow_disp(
         )
 
         for disp_path in tqdm(disp_files, desc=f"GT Edge {split}", ncols=80):
-            # 读取 disparity
+            # Read disparity
             disp = read_pfm(disp_path)
             if disp.ndim == 3:
-                # 有些 PFM 可能是三通道，这里取第一通道
+                # Some PFMs might be 3-channel; take the first channel here
                 disp = disp[..., 0]
 
             edge = disp_to_edge(
@@ -232,8 +244,8 @@ def process_sceneflow_disp(
                 canny_high=canny_high,
             )
 
-            # 生成对应的输出路径：把 root_disp 替换成 root_edge，并把后缀换成 .png
-            # 例如：
+            # Generate corresponding output paths: replace root_disp with root_edge and change the extension to .png
+            # Example:
             #   disp_path = .../disparity/TRAIN/A/xxx/0000.pfm
             #   rel_path = TRAIN/A/xxx/0000.pfm
             #   edge_path = .../gtedge/TRAIN/A/xxx/0000.png
@@ -257,9 +269,9 @@ def process_single_dir(
     canny_high=None,
 ):
     """
-    仅处理指定的 disparity 子目录（例如：
-        /home/.../data/sceneflow/disparity/TRAIN/15mm_focallength/scene_backwards/fast/left
-    ），方便快速调试可视化。
+    Process only a specific disparity subdirectory (e.g.,
+        /path/to/data/sceneflow/disparity/TRAIN/15mm_focallength/scene_backwards/fast/left
+    ) for quick debugging and visualization.
     """
     disp_dir = osp.abspath(disp_dir)
     pattern = osp.join(disp_dir, "*.pfm")
@@ -292,11 +304,11 @@ def process_single_dir(
 
 if __name__ == "__main__":
     """
-    使用示例：
-        # 1) 直接 Sobel + 阈值 2.5（和之前版本等价）
+    Usage examples:
+        # 1) Direct Sobel + threshold 2.5 (equivalent to previous versions)
         python gtedge.py --grad_thresh 2.5 --mode sobel
 
-        # 2) 先高斯模糊再求梯度，只保留大尺度几何边
+        # 2) Gaussian blur then gradient, retaining only large-scale geometric edges
         python gtedge.py --grad_thresh 2.5 --mode blur_sobel --blur_ksize 5 --blur_sigma 1.0
     """
 
