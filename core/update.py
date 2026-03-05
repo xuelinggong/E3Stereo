@@ -71,8 +71,8 @@ class SepConvGRU(nn.Module):
 
 class BasicMotionEncoder(nn.Module):
     """
-    Motion Encoder: 将 disp 与 corr 编码为 motion_features，供 GRU 迭代更新使用。
-    可选：将 Edge 注入编码过程，使 motion 特征在边界处更具判别力。
+    Motion Encoder: Encodes disp and corr into motion_features for iterative updates in the GRU.
+    Optional: Inject Edge into the encoding process to make motion features more discriminative at boundaries.
     """
     def __init__(self, args):
         super(BasicMotionEncoder, self).__init__()
@@ -85,7 +85,7 @@ class BasicMotionEncoder(nn.Module):
         self.conv = nn.Conv2d(64+64, 128-1, 3, padding=1)
 
         # ================== Edge-Guided Motion Encoder ====================##
-        # 将 Edge 注入 motion_features，支持 concat / film / gated 三种融合
+        # Inject Edge into motion_features, supporting three fusion modes: concat / film / gated
         self.edge_motion_encoder = getattr(args, 'edge_motion_encoder', False)
         self.edge_motion_fusion_mode = getattr(args, 'edge_motion_fusion_mode', 'film')
         motion_dim = 128
@@ -178,7 +178,7 @@ class BasicMultiUpdateBlock(nn.Module):
             nn.ReLU(inplace=True))
 
         # ================== Edge-Guided Disp Head ====================##
-        # 使用 Edge 引导 delta_disp 的预测，边缘处可学习更大的更新幅度
+        # Use Edge to guide delta_disp prediction, allowing larger update magnitudes to be learned at boundaries.
         self.edge_guided_disp_head = getattr(args, 'edge_guided_disp_head', False)
         self.edge_disp_fusion_mode = getattr(args, 'edge_disp_fusion_mode', 'film')
         if self.edge_guided_disp_head:
